@@ -14,6 +14,7 @@ This project implements a Streamlit web application to process data from a Snowf
 3. Queries are constructed to extract data from these structured fields using the JSON extraction operator (`:`).
 4. Player names are also assumed to be part of the `CONTEXTS_IO_CANDIVORE_USER_BASE_STATS_1` JSON object, accessed via the `player_name` key.
 5. **In-App Purchase events** are identified by the `event_name` field being equal to `'in_app_purchase'`. Other types of events (such as logins or gameplay) are displayed separately.
+6. The **table name** used for querying is assumed to be `atomic_table`, as per project requirements.
 
 ## Setup Instructions
 
@@ -22,15 +23,22 @@ This project implements a Streamlit web application to process data from a Snowf
 Clone the project repository using the following command:
 
 ```bash
-git clone https://github.com/your-repo-url.git
+git clone https://github.com/blochroni/CandivoreDataEngineerAssignment.git
 ```
 
-### 2. Install dependencies
+### 2. Navigate to Question 2
 
-Navigate into the project directory and install the required Python packages using `pip`:
+After cloning, navigate to the **Question2** folder:
 
 ```bash
-cd your-repo-folder
+cd CandivoreDataEngineerAssignment/Question2
+```
+
+### 3. Install dependencies
+
+Install the required Python packages using `pip`:
+
+```bash
 pip install -r requirements.txt
 ```
 
@@ -40,7 +48,7 @@ This will install the required libraries, including:
 - `pandas`: To handle and manipulate data.
 - `matplotlib`: To create visualizations.
 
-### 3. Set up Snowflake connection
+### 4. Set up Snowflake connection
 
 Before running the application, make sure to configure the Snowflake connection details in the `snowflake_connector.py` file. Replace the placeholder values with the correct credentials:
 
@@ -55,17 +63,17 @@ conn = snowflake.connector.connect(
 )
 ```
 
-### 4. Run the Streamlit app
+### 5. Run the Streamlit app
 
 Once everything is configured, run the Streamlit app locally using the following command:
 
 ```bash
-streamlit run streamlit_app/app.py
+streamlit run app.py
 ```
 
 This will open the app in your web browser. You should now be able to navigate between the "General Statistics" and "User Events" tabs.
 
-### 5. Architecture Diagram
+### 6. Architecture Diagram
 
 The architecture for this project is as follows:
 - **Streamlit Frontend**: Displays data to the user and allows interactions (e.g., selecting dates, searching user events).
@@ -83,4 +91,3 @@ The architecture for this project is as follows:
 
 - The application assumes the Snowflake table follows a specific structure, as outlined in the assumptions section above.
 - Make sure the Snowflake credentials are securely stored and not hardcoded in production environments.
-
