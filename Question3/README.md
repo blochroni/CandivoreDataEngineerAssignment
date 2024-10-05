@@ -137,7 +137,3 @@ The architecture of this pipeline consists of the following components:
 
 4. **Data Types**: Columns such as `Cost`, `Likes_Count`, and `Publish_Date` are handled with appropriate data types (e.g., integers, timestamps, floats).
 
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for more details.
