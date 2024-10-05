@@ -1,136 +1,94 @@
 
-# Influencer Marketing Dashboard Pipeline
+# Influencer Campaign Data Pipeline
 
-This project automates the process of extracting data from a Google Sheet, enriching it with additional data from the YouTube API, and inserting the final data into a Snowflake database. This is designed to run daily as an Airflow DAG for a scalable data pipeline.
+## Overview
+This project implements a data pipeline that extracts data from a Google Sheet, enriches it with additional information from YouTube, and inserts the enriched data into a Snowflake table. The pipeline is designed to run daily, integrating with Airflow to automatically refresh the data. The enriched data is used for marketing analytics purposes.
 
-## Objective
+## Architecture
+The data pipeline follows a simple Extract-Transform-Load (ETL) architecture:
 
-The pipeline achieves the following:
+1. **Extract**: 
+   - Data is extracted from a Google Sheet using the `gspread` Python library, which accesses the sheet via Google API credentials.
+   
+2. **Transform**:
+   - The video URLs from the Google Sheet are used to fetch additional metadata (like publish date and current likes) using the YouTube Data API.
+   - The data is enriched by adding these details, along with a timestamp of when the pipeline ran (`Interval_Date`).
+   - The `Cost` column is sanitized by removing dollar signs and casting it to a float type.
+   
+3. **Load**:
+   - The enriched data is inserted into a Snowflake table. The table is dynamically created if it does not exist, and data is inserted in batches for scalability.
 
-1. **Extract Data**: Fetch influencer campaign data from a Google Sheet.
-2. **Enrich Data**: For each video URL in the Google Sheet, the pipeline scrapes the YouTube video’s publish date and the current number of likes.
-3. **Store Data**: Inserts the enriched data into a Snowflake table called `INFLUENCER_CAMPAIGN_METRICS`.
-4. **Scalability**: The pipeline is designed to be scalable using Apache Spark, making it efficient for large datasets.
+## Assumptions
+- Google Sheets and Snowflake credentials are provided as environment variables or in a configuration file.
+- The Google Sheet contains relevant columns like `Influencer_Name`, `Video_Url`, `Campaign_Name`, and others as defined by the marketing team.
+- Snowflake credentials and YouTube API keys are stored securely in a configuration file and not hardcoded.
+- API rate limits are handled by retry mechanisms to prevent failures in the event of temporary outages or limits.
 
-## Requirements
+## Setup Instructions
 
-To run the pipeline, the following dependencies are required:
+### 1. Prerequisites
+- **Python 3.8+**
+- **Pip** for installing dependencies
+- A Google service account JSON file for accessing Google Sheets
+- Snowflake account credentials
+- YouTube API key
 
-- `tenacity`
-- `google-auth`
-- `google-auth-oauthlib`
-- `google-auth-httplib2`
-- `gspread`
-- `snowflake-connector-python`
-- `pyspark`
-- `requests`
-- `apache-airflow`
-- `python-dotenv`
+### 2. Installation
 
-You can install these dependencies using the following command:
+1. **Clone the Repository**:
+    ```bash
+    git clone https://github.com/your-username/influencer-campaign-data-pipeline.git
+    cd influencer-campaign-data-pipeline
+    ```
+
+2. **Install Required Libraries**:
+    Ensure that you have Python 3.8+ installed. Then install the required libraries:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. **Set Up Google Sheets API**:
+   - Create a Google service account and download the credentials JSON file.
+   - Share the Google Sheet with the service account email address.
+   - Ensure that the `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` points to your service account JSON file.
+
+4. **Configure Snowflake Credentials**:
+   - Set up Snowflake credentials either via environment variables or by editing the `config.py` file to include:
+     ```python
+     SNOWFLAKE_USER = '<your_username>'
+     SNOWFLAKE_PASSWORD = '<your_password>'
+     SNOWFLAKE_ACCOUNT = '<your_account>'
+     SNOWFLAKE_WAREHOUSE = '<your_warehouse>'
+     SNOWFLAKE_DATABASE = '<your_database>'
+     SNOWFLAKE_SCHEMA = '<your_schema>'
+     ```
+
+5. **Set Up YouTube API**:
+   - Get a YouTube Data API key from the Google Developer Console.
+   - Update the `config.py` file with your YouTube API key:
+     ```python
+     YOUTUBE_API_KEY = '<your_youtube_api_key>'
+     ```
+
+### 3. Running the Pipeline
+
+To run the pipeline manually, use the following command:
 
 ```bash
-pip install -r requirements.txt
+python pipeline.py
 ```
 
-## How It Works
+This will:
+- Extract the data from Google Sheets.
+- Enrich it by fetching YouTube video details.
+- Load it into the Snowflake table.
 
-### Spark Session
+### 4. Scheduling with Airflow
+To schedule the pipeline to run daily:
+1. Set up Apache Airflow on your system or server.
+2. Create a DAG that triggers the `run()` function in `pipeline.py` every day.
 
-The pipeline uses Spark for distributed processing, making it scalable for large datasets. The Spark session is initialized with memory and network timeout configurations for better performance:
-
-```python
-def get_spark_session():
-    return SparkSession.builder         .appName("InfluencerCampaignData")         .config("spark.executor.memory", "4g")         .config("spark.driver.memory", "2g")         .config("spark.network.timeout", "600s")         .getOrCreate()
-```
-
-### Extracting Google Sheet Data
-
-Google Sheets data is extracted using the `gspread` library. This function fetches all the records from the specified sheet.
-
-```python
-def extract_google_sheet_data():
-    creds = Credentials.from_service_account_file(config.GOOGLE_SERVICE_ACCOUNT_KEY_PATH)
-    client = gspread.authorize(creds)
-    sheet = client.open("Influencer_Campaign_Data")
-    worksheet = sheet.get_worksheet(0)
-    data = worksheet.get_all_records()
-    return data
-```
-
-### Scraping YouTube Data
-
-Each video URL is passed to the YouTube API to retrieve the publish date and likes count. The `tenacity` library is used to retry failed requests with exponential backoff.
-
-```python
-@retry(stop=stop_after_attempt(5), wait=wait_exponential(min=1, max=10))
-def scrape_youtube_data(video_url):
-    video_id = extract_video_id(video_url)
-    url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={video_id}&key={config.YOUTUBE_API_KEY}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        video_info = response.json()['items'][0]
-        publish_date = video_info['snippet']['publishedAt']
-        likes_count = video_info['statistics'].get('likeCount', 0)
-        return publish_date, likes_count
-    else:
-        return None, None
-```
-
-### Snowflake Integration
-
-The pipeline connects to Snowflake, creates the `INFLUENCER_CAMPAIGN_METRICS` table if it doesn’t exist, and inserts the enriched data.
-
-```python
-def insert_into_snowflake(conn, data):
-    columns = ', '.join(data.columns)
-    placeholders = ', '.join(['%s'] * len(data.columns))
-    insert_query = f"INSERT INTO INFLUENCER_CAMPAIGN_METRICS ({columns}) VALUES ({placeholders})"
-    cur = conn.cursor()
-    rows_to_insert = [tuple(row) for row in data.collect()]
-    cur.executemany(insert_query, rows_to_insert)
-    conn.commit()
-```
-
-## Scalability Improvements
-
-To scale the pipeline and make it more efficient, Spark workers can be used to distribute the workload of enriching the YouTube video data. Instead of running the enrichment on the driver node, each Spark worker can scrape YouTube data for its assigned partition. This can be done by broadcasting the YouTube API key and using distributed UDFs.
-
-## Running the Pipeline
-
-The `run()` function executes the entire pipeline, making it easy to trigger from Airflow. This function can be scheduled to run daily by an Airflow DAG.
-
-### Example Airflow DAG:
-
-```python
-from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-from datetime import datetime
-from pipeline import run
-
-default_args = {
-    'owner': 'airflow',
-    'start_date': datetime(2023, 1, 1),
-    'retries': 1,
-}
-
-dag = DAG(
-    'influencer_campaign_pipeline',
-    default_args=default_args,
-    schedule_interval='@daily'
-)
-
-run_task = PythonOperator(
-    task_id='run_pipeline',
-    python_callable=run,
-    dag=dag
-)
-```
-
-## Environment Configuration
-
-Store your environment-specific variables in a `.env` file or configuration file. These include:
-- Google Service Account credentials
-- YouTube API key
-- Snowflake credentials
-
+## Notes
+- The pipeline is designed to handle large datasets by processing the data in batches when inserting it into Snowflake.
+- Error handling and retries are implemented to ensure robustness in case of API failures or timeouts.
+- Timestamp handling is included for both the `Publish_Date` from YouTube and the `Interval_Date` representing when the pipeline runs.
