@@ -137,10 +137,6 @@ The architecture of this pipeline consists of the following components:
 
 4. **Data Types**: Columns such as `Cost`, `Likes_Count`, and `Publish_Date` are handled with appropriate data types (e.g., integers, timestamps, floats).
 
-## Future Improvements
-
-- **Error Logging**: Implement error logging for better debugging in case of failures.
-- **Parallelization**: Explore parallelizing the data enrichment process for faster performance with larger datasets.
 
 ## License
 
