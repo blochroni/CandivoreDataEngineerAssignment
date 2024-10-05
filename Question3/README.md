@@ -34,7 +34,7 @@ Before running the pipeline, make sure that the following are set up on your sys
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/blochroni/CandivoreDataEngineerAssignment.git
-   cd Question3
+   cd CandivoreDataEngineerAssignment/Question3
    ```
 
 2. **Create and Set Up Virtual Environment**:
