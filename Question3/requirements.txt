@@ -1,0 +1,11 @@
+tenacity
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+gspread
+snowflake-connector-python
+pyspark
+requests
+apache-airflow
+python-dotenv
+tenacity
