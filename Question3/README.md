@@ -1,94 +1,147 @@
 
 # Influencer Campaign Data Pipeline
 
-## Overview
-This project implements a data pipeline that extracts data from a Google Sheet, enriches it with additional information from YouTube, and inserts the enriched data into a Snowflake table. The pipeline is designed to run daily, integrating with Airflow to automatically refresh the data. The enriched data is used for marketing analytics purposes.
+This project is designed to run a data pipeline that extracts influencer marketing data from a Google Sheet, enriches the data by fetching additional details from YouTube, and loads the enriched data into a Snowflake table. The pipeline is intended to be run daily through an Airflow DAG.
 
-## Architecture
-The data pipeline follows a simple Extract-Transform-Load (ETL) architecture:
+## Repository Structure
 
-1. **Extract**: 
-   - Data is extracted from a Google Sheet using the `gspread` Python library, which accesses the sheet via Google API credentials.
-   
-2. **Transform**:
-   - The video URLs from the Google Sheet are used to fetch additional metadata (like publish date and current likes) using the YouTube Data API.
-   - The data is enriched by adding these details, along with a timestamp of when the pipeline ran (`Interval_Date`).
-   - The `Cost` column is sanitized by removing dollar signs and casting it to a float type.
-   
-3. **Load**:
-   - The enriched data is inserted into a Snowflake table. The table is dynamically created if it does not exist, and data is inserted in batches for scalability.
+The code for the pipeline is located in the `Question3` folder within this repository.
 
-## Assumptions
-- Google Sheets and Snowflake credentials are provided as environment variables or in a configuration file.
-- The Google Sheet contains relevant columns like `Influencer_Name`, `Video_Url`, `Campaign_Name`, and others as defined by the marketing team.
-- Snowflake credentials and YouTube API keys are stored securely in a configuration file and not hardcoded.
-- API rate limits are handled by retry mechanisms to prevent failures in the event of temporary outages or limits.
+```
+CandivoreDataEngineerAssignment/
+│
+└─── Question3/
+     │   
+     └─── pipeline.py  # Main script containing the pipeline code
+     └─── requirements.txt  # Required libraries
+     └─── .env  # Environment file (not included, must be created)
+```
+
+## Prerequisites
+
+Before running the pipeline, make sure that the following are set up on your system:
+
+- **Python 3.7+**
+- **Snowflake Account**: For data loading.
+- **Google Cloud Service Account**: To access Google Sheets.
+- **YouTube Data API v3**: For fetching video details.
+- **Apache Spark**: For handling large datasets.
 
 ## Setup Instructions
 
-### 1. Prerequisites
-- **Python 3.8+**
-- **Pip** for installing dependencies
-- A Google service account JSON file for accessing Google Sheets
-- Snowflake account credentials
-- YouTube API key
-
-### 2. Installation
-
 1. **Clone the Repository**:
-    ```bash
-    git clone https://github.com/your-username/influencer-campaign-data-pipeline.git
-    cd influencer-campaign-data-pipeline
-    ```
+   ```bash
+   git clone https://github.com/blochroni/CandivoreDataEngineerAssignment.git
+   cd CandivoreDataEngineerAssignment/Question3
+   ```
 
-2. **Install Required Libraries**:
-    Ensure that you have Python 3.8+ installed. Then install the required libraries:
-    ```bash
-    pip install -r requirements.txt
-    ```
+2. **Create and Set Up Virtual Environment**:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # For Linux/MacOS
+   # or
+   venv\Scriptsctivate  # For Windows
+   ```
 
-3. **Set Up Google Sheets API**:
-   - Create a Google service account and download the credentials JSON file.
-   - Share the Google Sheet with the service account email address.
-   - Ensure that the `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` points to your service account JSON file.
+3. **Install Dependencies**:
+   Install all required libraries by running:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-4. **Configure Snowflake Credentials**:
-   - Set up Snowflake credentials either via environment variables or by editing the `config.py` file to include:
-     ```python
-     SNOWFLAKE_USER = '<your_username>'
-     SNOWFLAKE_PASSWORD = '<your_password>'
-     SNOWFLAKE_ACCOUNT = '<your_account>'
-     SNOWFLAKE_WAREHOUSE = '<your_warehouse>'
-     SNOWFLAKE_DATABASE = '<your_database>'
-     SNOWFLAKE_SCHEMA = '<your_schema>'
-     ```
+4. **Set Up Environment Variables**:
+   You'll need to create a `.env` file in the `Question3` directory to store the necessary credentials for Google Sheets, YouTube API, and Snowflake.
 
-5. **Set Up YouTube API**:
-   - Get a YouTube Data API key from the Google Developer Console.
-   - Update the `config.py` file with your YouTube API key:
-     ```python
-     YOUTUBE_API_KEY = '<your_youtube_api_key>'
-     ```
+   Create a `.env` file with the following structure:
 
-### 3. Running the Pipeline
+   ```bash
+   SNOWFLAKE_USER=<your_snowflake_username>
+   SNOWFLAKE_PASSWORD=<your_snowflake_password>
+   SNOWFLAKE_ACCOUNT=<your_snowflake_account>
+   SNOWFLAKE_WAREHOUSE=<your_snowflake_warehouse>
+   SNOWFLAKE_DATABASE=<your_snowflake_database>
+   SNOWFLAKE_SCHEMA=<your_snowflake_schema>
+   
+   GOOGLE_SERVICE_ACCOUNT_KEY_PATH=<path_to_google_service_account_json>
+   GOOGLE_API_SCOPES=<your_google_scopes>
+   GOOGLE_SHEET_ID=<your_google_sheet_id>
+   
+   YOUTUBE_API_KEY=<your_youtube_api_key>
+   ```
 
-To run the pipeline manually, use the following command:
+   This `.env` file is essential for connecting to Snowflake, Google Sheets, and YouTube API, and it is loaded into the pipeline using the `python-dotenv` library.
 
-```bash
-python pipeline.py
-```
+5. **Configuration (`config.py`)**:
+   Make sure the `config.py` file in the `Question3` folder pulls data from the `.env` file correctly. Here's an example of how it should look:
 
-This will:
-- Extract the data from Google Sheets.
-- Enrich it by fetching YouTube video details.
-- Load it into the Snowflake table.
+   ```python
+   import os
+   from dotenv import load_dotenv
 
-### 4. Scheduling with Airflow
-To schedule the pipeline to run daily:
-1. Set up Apache Airflow on your system or server.
-2. Create a DAG that triggers the `run()` function in `pipeline.py` every day.
+   # Load environment variables from .env file
+   load_dotenv()
 
-## Notes
-- The pipeline is designed to handle large datasets by processing the data in batches when inserting it into Snowflake.
-- Error handling and retries are implemented to ensure robustness in case of API failures or timeouts.
-- Timestamp handling is included for both the `Publish_Date` from YouTube and the `Interval_Date` representing when the pipeline runs.
+   # Snowflake credentials
+   SNOWFLAKE_USER = os.getenv("SNOWFLAKE_USER")
+   SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
+   SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT")
+   SNOWFLAKE_WAREHOUSE = os.getenv("SNOWFLAKE_WAREHOUSE")
+   SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE")
+   SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA")
+
+   # Google Sheets credentials
+   GOOGLE_SERVICE_ACCOUNT_KEY_PATH = os.getenv("GOOGLE_SERVICE_ACCOUNT_KEY_PATH")
+   GOOGLE_API_SCOPES = os.getenv("GOOGLE_API_SCOPES")
+   GOOGLE_SHEET_ID = os.getenv("GOOGLE_SHEET_ID")
+
+   # YouTube API key
+   YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+   ```
+
+6. **Running the Pipeline**:
+   After setting up the environment and installing dependencies, run the pipeline by executing the `pipeline.py` file:
+
+   ```bash
+   python pipeline.py
+   ```
+
+## Architecture
+
+The architecture of this pipeline consists of the following components:
+
+1. **Google Sheets Data Extraction**:
+   - The `extract_google_sheet_data()` function connects to a Google Sheet and retrieves all records from the first worksheet.
+   - Credentials for Google Sheets API access are stored in the `config.py` file and loaded from the `.env` file.
+
+2. **YouTube API Integration**:
+   - The pipeline enriches the Google Sheets data with YouTube video details (publish date and likes count) using the YouTube Data API v3.
+   - Video IDs are extracted from YouTube URLs, and the API is queried for the corresponding video details.
+
+3. **Data Transformation**:
+   - The data is enriched with additional fields (`publish_date`, `current_likes_count`, and `interval_date`) to reflect YouTube data and the current date/time.
+
+4. **Snowflake Table Creation & Insertion**:
+   - A Snowflake table named `INFLUENCER_CAMPAIGN_METRICS` is dynamically created if it doesn’t already exist.
+   - The enriched data is then inserted into the Snowflake table in batches for efficient processing.
+
+5. **Batch Processing**:
+   - The data is inserted into Snowflake in batches (configurable batch size, default is 1000 rows per batch) to optimize performance when handling larger datasets.
+
+## Assumptions
+
+1. **Google Sheet Structure**: It is assumed that the Google Sheet contains the following columns: `Influencer_Name`, `Video_Url`, `Campaign_Name`, etc. All columns from the sheet are included in the final table.
+   
+2. **API Keys**: It is assumed that valid API keys for Google Sheets and YouTube Data API are available and correctly configured in the `.env` file.
+
+3. **Daily Execution**: This pipeline is designed to be executed daily by an Airflow DAG or another scheduler to keep the Snowflake table up to date.
+
+4. **Data Types**: Columns such as `Cost`, `Likes_Count`, and `Publish_Date` are handled with appropriate data types (e.g., integers, timestamps, floats).
+
+## Future Improvements
+
+- **Error Logging**: Implement error logging for better debugging in case of failures.
+- **Parallelization**: Explore parallelizing the data enrichment process for faster performance with larger datasets.
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
