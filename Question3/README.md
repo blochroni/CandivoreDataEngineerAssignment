@@ -13,6 +13,8 @@ CandivoreDataEngineerAssignment/
 └─── Question3/
      │   
      └─── pipeline.py  # Main script containing the pipeline code
+     |___ config.py
+     |___ dag.py
      └─── requirements.txt  # Required libraries
      └─── .env  # Environment file (not included, must be created)
 ```
@@ -32,7 +34,7 @@ Before running the pipeline, make sure that the following are set up on your sys
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/blochroni/CandivoreDataEngineerAssignment.git
-   cd CandivoreDataEngineerAssignment/Question3
+   cd Question3
    ```
 
 2. **Create and Set Up Virtual Environment**:
