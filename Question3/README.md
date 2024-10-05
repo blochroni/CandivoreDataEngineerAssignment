@@ -132,10 +132,12 @@ The architecture of this pipeline consists of the following components:
 ## Assumptions
 
 1. **Google Sheet Structure**: It is assumed that the Google Sheet contains the following columns: `Influencer_Name`, `Video_Url`, `Campaign_Name`, etc. All columns from the sheet are included in the final table.
+
+2. **Google Sheet Name**: We assume the name of the Google Sheet is INFLUENCER_CAMPAIGN_METRICS and that we have access to it for extracting data.
    
-2. **API Keys**: It is assumed that valid API keys for Google Sheets and YouTube Data API are available and correctly configured in the `.env` file.
+3. **API Keys**: It is assumed that valid API keys for Google Sheets and YouTube Data API are available and correctly configured in the `.env` file.
 
-3. **Daily Execution**: This pipeline is designed to be executed daily by an Airflow DAG or another scheduler to keep the Snowflake table up to date.
+4. **Daily Execution**: This pipeline is designed to be executed daily by an Airflow DAG or another scheduler to keep the Snowflake table up to date.
 
-4. **Data Types**: Columns such as `Cost`, `Likes_Count`, and `Publish_Date` are handled with appropriate data types (e.g., integers, timestamps, floats).
+5. **Data Types**: Columns such as `Cost`, `Likes_Count`, and `Publish_Date` are handled with appropriate data types (e.g., integers, timestamps, floats).
 
